@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    tty: true
+    stdin_open: true
+    volumes:
+      - .:/go/src/app
+    ports:
+      - 8080:8080
+    environment:
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
+      MYSQL_DATABASE: todos
+      MYSQL_HOST: dockerMySQL
+    depends_on:
+      - db
+  db:
+    image: mysql:8.0.27
+    platform: linux/x86_64
+    container_name: dockerMySQL
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql_volume:/var/lib/mysql
+    environment:
+      MYSQL_USER: mysql
+      MYSQL_DATABASE: todos
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_PASSWORD: mysql
+    ports:
+      - 3306:3306
+volumes:
+  mysql_volume:
