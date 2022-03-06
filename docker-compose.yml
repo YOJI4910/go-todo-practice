@@ -15,20 +15,19 @@ services:
     environment:
       MYSQL_USER: mysql
       MYSQL_PASSWORD: mysql
-      MYSQL_DATABASE: todos
-      MYSQL_HOST: dockerMySQL
+      MYSQL_DATABASE: goTodo
+      MYSQL_HOST: goTodoDB
     depends_on:
       - db
   db:
-    image: mysql:8.0.27
-    platform: linux/x86_64
-    container_name: dockerMySQL
+    image: mysql:8.0.28-oracle
+    container_name: goTodoDB
     command: --default-authentication-plugin=mysql_native_password
     volumes:
       - mysql_volume:/var/lib/mysql
     environment:
       MYSQL_USER: mysql
-      MYSQL_DATABASE: todos
+      MYSQL_DATABASE: goTodo
       MYSQL_ROOT_PASSWORD: mysql
       MYSQL_PASSWORD: mysql
     ports:

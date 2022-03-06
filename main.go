@@ -4,56 +4,71 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
-var todos []TODOObject = []TODOObject{}
-
-type MetaData struct {
-	ID        int       `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-}
+var gormDB *gorm.DB
 
 type TODO struct {
+	gorm.Model
 	Author      string    `json:"author"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	DueDate     time.Time `json:"dueDate"`
 }
 
-type TODOObject struct {
-	MetaData
-	TODO
-}
-
 func list(response http.ResponseWriter, request *http.Request) {
+	todos := make([]TODO, 0)
+	if err := gormDB.Find(&todos).Error; err != nil {
+		panic(err)
+	}
+
 	json.NewEncoder(response).Encode(todos)
 }
 
 func add(response http.ResponseWriter, request *http.Request) {
 	encoder := json.NewEncoder(response)
 	if request.Body == http.NoBody {
-		encoder.Encode("request body is nil")
+		_ = encoder.Encode("request body is nil")
 		return
 	}
+
 	var todo TODO
 	if err := json.NewDecoder(request.Body).Decode(&todo); err != nil {
-		encoder.Encode(err.Error())
+		_ = encoder.Encode(err.Error())
 		return
 	}
-	metadata := MetaData{
-		ID:        len(todos) + 1,
-		CreatedAt: time.Now(),
+
+	if err := gormDB.Create(&todo).Error; err != nil {
+		_ = encoder.Encode(err.Error())
+		return
 	}
-	object := TODOObject{
-		TODO:     todo,
-		MetaData: metadata,
-	}
-	todos = append(todos, object)
-	encoder.Encode(object)
+
+	encoder.Encode(todo)
 }
 
 func main() {
+	_gormDB, err := gorm.Open(mysql.Open("root:mysql@tcp(goTodoDB)/goTodo?parseTime=true"), &gorm.Config{})
+	if err != nil {
+		panic(err)
+	}
+	db, err := _gormDB.DB()
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	if !_gormDB.Migrator().HasTable(&TODO{}) {
+		if err := _gormDB.Migrator().CreateTable(&TODO{}); err != nil {
+			panic(err)
+		}
+	}
+
+	gormDB = _gormDB
+
 	http.HandleFunc("/todo/list", list)
 	http.HandleFunc("/todo/add", add)
-	http.ListenAndServe(":8080", nil)
+	_ = http.ListenAndServe(":8080", nil)
 }
